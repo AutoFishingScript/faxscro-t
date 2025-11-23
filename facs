@@ -1,0 +1,180 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+
+-- create ScreenGui (PlayerGui then fallback CoreGui)
+local gui = Instance.new("ScreenGui")
+gui.Name = "AutoBuyGUI"
+gui.ResetOnSpawn = false
+
+local ok, err = pcall(function()
+	gui.Parent = player:WaitForChild("PlayerGui")
+end)
+if not ok or not gui.Parent then
+	gui.Parent = game:GetService("CoreGui")
+end
+
+---------------------------------------------------------
+-- MAIN FRAME (GLASS NEON + MOVABLE)
+---------------------------------------------------------
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 280, 0, 200)
+frame.Position = UDim2.new(0.5, -140, 0.5, -100)
+frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+frame.BackgroundTransparency = 0.65
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Parent = gui
+
+-- Rounded corners
+local corner = Instance.new("UICorner", frame)
+corner.CornerRadius = UDim.new(0, 15)
+
+-- Neon border glow
+local glow = Instance.new("UIStroke", frame)
+glow.Thickness = 3
+glow.Color = Color3.fromRGB(0, 255, 255)
+glow.Transparency = 0.2
+glow.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+-- Glass neon gradient
+local frameGradient = Instance.new("UIGradient", frame)
+frameGradient.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 255, 255)),
+	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 50, 50)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 255, 255))
+})
+frameGradient.Transparency = NumberSequence.new({
+	NumberSequenceKeypoint.new(0, 0.2),
+	NumberSequenceKeypoint.new(0.5, 0.6),
+	NumberSequenceKeypoint.new(1, 0.2)
+})
+
+---------------------------------------------------------
+-- TITLE
+---------------------------------------------------------
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 36)
+title.Position = UDim2.new(0, 0, 0, 6)
+title.BackgroundTransparency = 1
+title.Text = "STEAL A BRAINROT\nAUTO MOREIRA"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextSize = 15
+title.Font = Enum.Font.GothamBold
+title.TextWrapped = true
+title.Parent = frame
+title.Active = true
+
+---------------------------------------------------------
+-- BUTTON
+---------------------------------------------------------
+local button = Instance.new("TextButton")
+button.Size = UDim2.new(0.9, 0, 0, 35)
+button.Position = UDim2.new(0.05, 0, 0.42, 0)
+button.Text = "Start Auto Moreira"
+button.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
+button.TextColor3 = Color3.fromRGB(0, 0, 0)
+button.TextSize = 16
+button.Font = Enum.Font.GothamBold
+button.Parent = frame
+Instance.new("UICorner", button).CornerRadius = UDim.new(0,8)
+
+---------------------------------------------------------
+-- LOADING BAR
+---------------------------------------------------------
+local loadingBar = Instance.new("Frame")
+loadingBar.Size = UDim2.new(0.9, 0, 0, 8)
+loadingBar.Position = UDim2.new(0.05, 0, 0.70, 0)
+loadingBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+loadingBar.Visible = false
+loadingBar.Parent = frame
+Instance.new("UICorner", loadingBar).CornerRadius = UDim.new(0,6)
+
+local fill = Instance.new("Frame", loadingBar)
+fill.Size = UDim2.new(0, 0, 1, 0)
+fill.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+Instance.new("UICorner", fill).CornerRadius = UDim.new(0,6)
+
+local fillGradient = Instance.new("UIGradient", fill)
+fillGradient.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255,0,0)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(0,0,255))
+}
+
+---------------------------------------------------------
+-- AUTO BLOCK STATUS
+---------------------------------------------------------
+local autoblockStatus = Instance.new("TextLabel")
+autoblockStatus.Size = UDim2.new(1, 0, 0, 20)
+autoblockStatus.Position = UDim2.new(0, 0, 0.83, 0)
+autoblockStatus.BackgroundTransparency = 1
+autoblockStatus.Text = "AUTO BLOCK: ON"
+autoblockStatus.TextColor3 = Color3.fromRGB(0, 255, 0)
+autoblockStatus.TextScaled = true
+autoblockStatus.Font = Enum.Font.GothamBold
+autoblockStatus.Parent = frame
+
+---------------------------------------------------------
+-- DRAG SYSTEM
+---------------------------------------------------------
+local dragging = false
+local dragOffset = Vector2.new(0,0)
+
+local function clampPosition(px, py)
+	local sw, sh = workspace.CurrentCamera.ViewportSize.X, workspace.CurrentCamera.ViewportSize.Y
+	local fw, fh = frame.AbsoluteSize.X, frame.AbsoluteSize.Y
+	px = math.clamp(px, 0, sw - fw)
+	py = math.clamp(py, 0, sh - fh)
+	return px, py
+end
+
+title.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		local mouse = UserInputService:GetMouseLocation()
+		dragOffset = Vector2.new(mouse.X - frame.AbsolutePosition.X, mouse.Y - frame.AbsolutePosition.Y)
+	end
+end)
+
+title.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = false
+	end
+end)
+
+RunService.Heartbeat:Connect(function()
+	if dragging then
+		local mouse = UserInputService:GetMouseLocation()
+		local x = mouse.X - dragOffset.X
+		local y = mouse.Y - dragOffset.Y
+		x, y = clampPosition(x, y)
+		frame.Position = UDim2.new(0, x, 0, y)
+	end
+end)
+
+---------------------------------------------------------
+-- BUTTON ACTION
+---------------------------------------------------------
+local running = false
+button.MouseButton1Click:Connect(function()
+	if running then return end
+	running = true
+
+	button.Text = "AUTO MOREIRA STARTING..."
+	button.BackgroundColor3 = Color3.fromRGB(255, 200, 0)
+
+	loadingBar.Visible = true
+	fill.Size = UDim2.new(0, 0, 1, 0)
+
+	for i = 1, 100 do
+		fill.Size = UDim2.new(i / 100, 0, 1, 0)
+		task.wait(0.15)
+	end
+
+	button.Text = "PLEASE WAIT THE BOT!"
+	button.BackgroundColor3 = Color3.fromRGB(0, 200, 80)
+	button.Active = false
+	button.AutoButtonColor = false
+end)
